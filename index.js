@@ -9,15 +9,14 @@ var path = require('path');
 var jwt = require('jsonwebtoken');
 var config = require('./config/database');
 var fs = require('fs');
+var nodemailer = require('nodemailer');
+var md5 = require('md5');
 
+// var server = 'http://localhost:8081';
 
 app.use(bodyparser.json());
 app.use(bodyparser.urlencoded({extended: false}));
-// app.use("/public/images", express.static(path.join(__dirname, 'images')));
-// app.use(express.static(__dirname + '/public'));
-// app.use('/static', express.static(__dirname + '/public'));
 app.use('/profile',express.static(path.join(__dirname, 'public/images')));
-// app.use(express.static(__dirname + '/public'));
 
 var apiRoutes = express.Router(); 
 
@@ -30,6 +29,23 @@ var user = new User();
 var user_data;
 app.use('/users', apiRoutes);
 // app.use('/upload', apiRoutes);
+
+
+// Send email for verify
+let transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // secure:true for port 465, secure:false for port 587
+    auth: {
+        user: '',
+        pass: ''
+    }
+});
+
+// setup email data with unicode symbols
+
+
+
 
 app.get('/users', function (req, res) {
     User.find({}, function(err, data){
@@ -119,8 +135,29 @@ app.post('/register', function(req, res){
                     user.save(function(err){
                         if(err)
                             res.json({'message': 'error found'});
-                        else
-                            res.json({'message': 'register success'});
+                        else{
+
+                            var link = 'http://localhost:8081' + '/confirm?token=' + md5(req.body.email+req.body.name) + '&id=' + req.body.email;
+                            var msg = 'Hi ' + req.body.name + ',<br/><br/>Click the below link to activate your Hot or Not Account. <br> <a href='+ link + '>' +link + '</a>';
+                            let mailOptions = {
+                                from: '"Hot Or Not App" <justdoit.hacker49@gmail.com>', // sender address
+                                to: req.body.email, // list of receivers
+                                subject: 'Verify your account', // Subject line
+                                // text: 'Hello world ?', // plain text body
+
+                                html: msg
+                            };
+                            transporter.sendMail(mailOptions, (error, info) => {
+                            if (error) {
+                                return console.log(error);
+                            }
+                            console.log('Message %s sent: %s', info.messageId, info.response);
+                            res.json({message: 'register success', mailSent: true});
+                            
+                        });
+                            
+
+                        }
                 
                     })
                 }
@@ -135,7 +172,37 @@ app.post('/register', function(req, res){
         
     
 })
+app.get('/confirm', function(req, res){
+    var cnf_token = req.query.token;
+    var email = req.query.id;
+    if(cnf_token === ''){
+        return res.end('Error Somethinh');
+    }
 
+    else{
+            User.find({email: email}, function(err, data){
+                if(err) console.log('error!')
+                else{
+                    if(data){
+                        var m = md5(data[0].email+data[0].name);
+                        // console.log(cnf_token);
+                        // console.log(m);
+                        if(cnf_token ===  m){
+                            User.update({email: email}, { verified: true}, function(err, docs){
+                                if(err) console.log('error!!')
+                                else{
+                                    res.json({success: true})
+                                    // res.redirect('/')
+                                }
+                            })
+                        }
+                    }
+                    else res.end('error!');
+                }
+            })
+        }
+    
+})
 
 
 // Image Upload
@@ -185,19 +252,15 @@ app.post('/upload', function(req, res) {
             res.json({ success: true,
                         id: req.body.id,
                         image: name,
-                        'data': user_data
+                        data: user_data
                     });
     })
 });
 });
 
-
-
 var server = app.listen(8081, function () {
 
-var host = server.address().address
-var port = server.address().port
-
-console.log("Example app listening at http://%s:%s", host, port)
-
+    var host = server.address().address
+    var port = server.address().port
+    console.log("Example app listening at http://%s:%s", host, port)
 })
