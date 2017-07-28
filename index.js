@@ -47,8 +47,7 @@ app.get('/', function(req, res){
     res.end("Hello Wolrd");
 })
 
-
-
+    
 app.get('/users', function (req, res) {
     User.find({}, function(err, data){
         if(err)
