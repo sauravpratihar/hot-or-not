@@ -43,7 +43,9 @@ let transporter = nodemailer.createTransport({
 });
 
 // setup email data with unicode symbols
-
+app.get('/', function(req, res){
+    res.end("Hello Wolrd");
+})
 
 
 
