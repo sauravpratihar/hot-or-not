@@ -4,6 +4,8 @@ var bodyparser = require('body-parser');
 var mongodb = require('mongodb').MongoClient
 var mongoose     = require('mongoose');
 var Schema       = mongoose.Schema;
+var multer = require('multer');
+var path = require('path')
 
 
 app.use(bodyparser.json());
@@ -91,11 +93,53 @@ app.post('/register', function(req, res){
 })
 
 
+
+// Image Upload
+var Storage = multer.diskStorage({
+    destination: function(req, file, callback) {
+        callback(null, "./images");
+    },
+
+    filename: function(req, file, callback) {
+        callback(null, Date.now() + "_" + file.originalname);
+    },
+
+});
+
+// var upload = multer({
+//     storage: Storage,
+
+//     fileFilter: function(req, file, callback) {
+// 	var ext = path.extname(file.originalname)
+// 	if (ext !== '.png' && ext !== '.jpg' && ext !== '.gif' && ext !== '.jpeg') {
+// 		return callback(res.end('Only images are allowed'), null)
+// 	}
+// 	callback(null, true)
+// }
+// }).array("imgUploader", 3); //Field name and max count
+
+app.post('/upload', function(req, res) {
+	var upload = multer({
+		storage: Storage,
+		fileFilter: function(req, file, callback) {
+			var ext = path.extname(file.originalname)
+			if (ext !== '.png' && ext !== '.jpg' && ext !== '.gif' && ext !== '.jpeg') {
+				return callback(res.end('Only images are allowed'), null)
+			}
+			callback(null, true)
+		}
+    }).single('imgUploader');
+    
+	upload(req, res, function(err) {
+		res.end('File is uploaded')
+	})
+})
+
 var server = app.listen(8081, function () {
 
-  var host = server.address().address
-  var port = server.address().port
+var host = server.address().address
+var port = server.address().port
 
-  console.log("Example app listening at http://%s:%s", host, port)
+console.log("Example app listening at http://%s:%s", host, port)
 
 })
