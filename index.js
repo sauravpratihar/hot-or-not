@@ -264,24 +264,54 @@ app.post('/upload', function(req, res) {
 // display 2 images
 app.post('/play', function(req, res){
     user_id = req.body.id;
-    filter = { _id: {'$ne': user_id } }
+    filter = { _id: {$ne: user_id } }
+    console.log(user_id)
+    update_query = {$inc: {appear: 1}}
     User.find(filter).random(2, true, function(err, data) {
         if (err) 
             throw err;
         else
             // res.json(data[0].profile);
-            image1 = data[0].profile;
-            image2 = data[1].profile;
+            // console.log(data)
+            User.update({$or: [{_id: data[0]._id}, {_id: data[1]._id}] },update_query, {multi: true} ,function(err, data2){
+                if(err)
+                    console.log("error");
 
-            res.json({image1, image2});
-        
+                else{
+                    // console.log('data2 :' + data2 + '')
+                    image1 = data[0].profile;
+                    image2 = data[1].profile;
+                    // console.log(data[0]._id)
+                    // console.log(data[1]._id)
+                    res.json({image1, image2});
+                }
+            })
+
     });
 
 })
 
+// vote the hot
+// now simple vote post can hackable URGENT solve this
+app.post('/vote', function(req, res){
+    pic = req.body.pic;
+    // x = "1501230500629xoxo.jpg"
+    // console.log(parseInt(pic.slice(0,13))+8);
+    if(pic === 'unknown.jpg')
+        res.json({message: 'please update profile pic'});
+
+    else{
+        User.findOneAndUpdate({profile: pic}, {$inc: {hot: 1}}, function(err, data){
+            if(err)
+                console.log('error')
+            else{
+                res.json({message : 'success'});
+            }
+        })
+    }
+})
 
 var server = app.listen(8081, function () {
-
     var host = server.address().address
     var port = server.address().port
     console.log("Example app listening at http://%s:%s", host, port)
