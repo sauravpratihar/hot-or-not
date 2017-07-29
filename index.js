@@ -11,8 +11,9 @@ var config = require('./config/database');
 var fs = require('fs');
 var nodemailer = require('nodemailer');
 var md5 = require('md5');
-
+require('mongoose-query-random');
 // var server = 'http://localhost:8081';
+
 
 app.use(bodyparser.json());
 app.use(bodyparser.urlencoded({extended: false}));
@@ -258,6 +259,26 @@ app.post('/upload', function(req, res) {
     })
 });
 });
+
+
+// display 2 images
+app.post('/play', function(req, res){
+    user_id = req.body.id;
+    filter = { _id: {'$ne': user_id } }
+    User.find(filter).random(2, true, function(err, data) {
+        if (err) 
+            throw err;
+        else
+            // res.json(data[0].profile);
+            image1 = data[0].profile;
+            image2 = data[1].profile;
+
+            res.json({image1, image2});
+        
+    });
+
+})
+
 
 var server = app.listen(8081, function () {
 
