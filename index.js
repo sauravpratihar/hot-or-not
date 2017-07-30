@@ -28,7 +28,7 @@ var User = require('./models/users');
 
 var user = new User();
 var user_data;
-app.use('/users', apiRoutes);
+// app.use('/users', apiRoutes);
 // app.use('/upload', apiRoutes);
 
 
