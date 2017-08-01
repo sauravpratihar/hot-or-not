@@ -311,7 +311,8 @@ app.post('/vote', function(req, res){
     }
 })
 
-port = process.env.PORT || 3000;
+
+port = process.env.PORT || 8081;
 var server = app.listen(port, function () {
     var host = server.address().address
     var port = server.address().port
