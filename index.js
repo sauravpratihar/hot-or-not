@@ -13,13 +13,13 @@ var nodemailer = require('nodemailer');
 var md5 = require('md5');
 require('mongoose-query-random');
 // var server = 'http://localhost:8081';
-
+var publicIp = require('public-ip');
 
 app.use(bodyparser.json());
 app.use(bodyparser.urlencoded({extended: false}));
 app.use('/profile',express.static(path.join(__dirname, 'public/images')));
 
-var apiRoutes = express.Router(); 
+var apiRoutes = express.Router();
 
 mongoose.connect(config.database, {useMongoClient: true}); // connect to our database
 app.set('superSecret', config.secret);
@@ -38,8 +38,8 @@ let transporter = nodemailer.createTransport({
     port: 465,
     secure: true, // secure:true for port 465, secure:false for port 587
     auth: {
-        user: '',
-        pass: ''
+        user: 'justdoit.hacker49@gmail.com',
+        pass: 'Saorav@08'
     }
 });
 
@@ -48,7 +48,7 @@ app.get('/', function(req, res){
     res.end("Hello Wolrd");
 })
 
-    
+
 app.get('/users', function (req, res) {
     User.find({}, function(err, data){
         if(err)
@@ -72,7 +72,7 @@ app.post('/login', function(req, res){
                 var token = jwt.sign(user, app.get('superSecret'), {
                     expiresIn: 60*60*1440 // expires in 24 hours
                 });
-                
+
                 user_data = data;
                 // res.json(data[0])
                 res.json({
@@ -96,13 +96,13 @@ apiRoutes.use(function(req, res, next) {
   if(token) {
 
     // verifies secret and checks exp
-    jwt.verify(token, app.get('superSecret'), function(err, decoded) {      
+    jwt.verify(token, app.get('superSecret'), function(err, decoded) {
       if (err) {
-        return res.json({ success: false, message: 'Failed to authenticate token.' });    
+        return res.json({ success: false, message: 'Failed to authenticate token.' });
       } else {
         // if everything is good, save to request for use in other routes
         req.decoded = decoded;
-        
+
         next();
       }
     });
@@ -111,9 +111,9 @@ apiRoutes.use(function(req, res, next) {
 
     // if there is no token
     // return an error
-    return res.status(403).send({ 
-        success: false, 
-        message: 'No token provided.' 
+    return res.status(403).send({
+        success: false,
+        message: 'No token provided.'
     });
 
   }
@@ -126,20 +126,53 @@ app.post('/register', function(req, res){
         user.email = req.body.email;
         user.password = req.body.password;
 
-        User.find({email: req.body.email}, function(err,data){
+        User.find({ email: req.body.email }, function(err,data){
             if(err)
                 res.json(err)
             else
-                if(data[0])
-                    res.json({'message': 'email id exists'});
+                if(data[0]){
+                    console.log(data[0].verified);
+                    if (!data[0].verified) {
+                      publicIp.v4().then(ip => {
+                        console.log("your public ip address", ip);
 
+                        var link = ip + '/confirm?token=' + md5(req.body.email+req.body.name) + '&id=' + req.body.email;
+                        var msg = 'Hi ' + req.body.name + ',<br/><br/>Click the below link to activate your Hot or Not Account. <br> <a href='+ link + '>' +link + '</a>';
+                        let mailOptions = {
+                            from: '"Hot Or Not App" <justdoit.hacker49@gmail.com>', // sender address
+                            to: req.body.email, // list of receivers
+                            subject: 'Verify your account', // Subject line
+                            // text: 'Hello world ?', // plain text body
+
+                            html: msg
+                        };
+                        transporter.sendMail(mailOptions, (error, info) => {
+                        if (error) {
+                            return console.log(error);
+                        }
+
+                        console.log('Message %s sent: %s', info.messageId, info.response);
+                        res.json({message: 'register success', mailSent: true});
+
+                    });
+
+
+                  });
+                    }
+
+                    else
+                      res.json({'message': 'email id exists'});
+                }
                 else{
                     user.save(function(err){
                         if(err)
                             res.json({'message': 'error found'});
                         else{
 
-                            var link = 'http://localhost:8081' + '/confirm?token=' + md5(req.body.email+req.body.name) + '&id=' + req.body.email;
+                          publicIp.v4().then(ip => {
+                            console.log("your public ip address", ip);
+
+                            var link = ip + '/confirm?token=' + md5(req.body.email+req.body.name) + '&id=' + req.body.email;
                             var msg = 'Hi ' + req.body.name + ',<br/><br/>Click the below link to activate your Hot or Not Account. <br> <a href='+ link + '>' +link + '</a>';
                             let mailOptions = {
                                 from: '"Hot Or Not App" <justdoit.hacker49@gmail.com>', // sender address
@@ -153,14 +186,16 @@ app.post('/register', function(req, res){
                             if (error) {
                                 return console.log(error);
                             }
+
                             console.log('Message %s sent: %s', info.messageId, info.response);
                             res.json({message: 'register success', mailSent: true});
-                            
-                        });
-                            
 
+                        });
+
+
+                      });
                         }
-                
+
                     })
                 }
                     // res.json({'message': 'username or password invald'});
@@ -168,11 +203,11 @@ app.post('/register', function(req, res){
         });
 
     }
-    
+
     else
         res.json({'message': 'params empty'});
-        
-    
+
+
 })
 app.get('/confirm', function(req, res){
     var cnf_token = req.query.token;
@@ -203,7 +238,7 @@ app.get('/confirm', function(req, res){
                 }
             })
         }
-    
+
 })
 
 
@@ -232,7 +267,7 @@ app.post('/upload', function(req, res) {
 			callback(null, true)
 		}
     }).single('imgUploader');
-    
+
 	upload(req, res, function(err) {
         User.find({_id: req.body.id}, function(err, data){
             if(err)
@@ -241,12 +276,12 @@ app.post('/upload', function(req, res) {
                 user_data = data;
         });
         User.update({_id: req.body.id}, { profile: name}, function(err, docs){
-        if(err) 
+        if(err)
             res.json(err);
         else
             // delete old profile pic
             if(user_data[0].profile !== 'unknown.jpg'){
-                fs.unlinkSync("public/images/" + user_data[0].profile);    
+                fs.unlinkSync("public/images/" + user_data[0].profile);
             }
 
 
@@ -268,7 +303,7 @@ app.post('/play', function(req, res){
     console.log(user_id)
     update_query = {$inc: {appear: 1}}
     User.find(filter).random(2, true, function(err, data) {
-        if (err) 
+        if (err)
             throw err;
         else
             // res.json(data[0].profile);
